@@ -1,13 +1,17 @@
 # !/usr/bin/env python3
 
+import os.path
 import argparse
+import csv
+
+# Used to strip accents from names if the WeBWorK version can't handle accents
 import unidecode
 
 parser = argparse.ArgumentParser(
     description = "Convert Omnivox classlist to WeBWorK classlist",
 )
 
-parser.add_argument('input',#'-i',
+parser.add_argument('input',
     help = "input file from Omnivox\n student number, first and last name are required.  email address and section number are recommended.",
     )
 
@@ -27,19 +31,21 @@ parser.add_argument('--lang', '-l',
     default = 'en',
     )
 
+parser.add_argument('--accents','-a',
+    )
 args = parser.parse_args()
 
-print(args)
-
-import os.path
-
 infile = args.input
-
 if not os.path.isfile(infile):
-    print(f"Input file, {infile} not found")
-    raise SystemExit()
+    raise SystemExit(f"Input file, {infile} not found")
 
-import csv
+outfile = args.output
+if outfile == None:
+    outfile = os.path.splitext(infile)[0]+'.lst'
+elif not os.path.splitext(outfile)[1] == '.lst':
+    outfile = outfile+'.lst'
+
+lang = args.lang
 
 def definitions():
     global fields 
@@ -68,47 +74,40 @@ def definitions():
     
 definitions()
 
-reader = csv.DictReader(open(infile, 'r'),delimiter=args.delimiter)
-cols = reader.fieldnames
-print(cols)
+with open(infile, 'r') as csvin:
+    reader = csv.DictReader(csvin,delimiter=args.delimiter)
+    cols = reader.fieldnames
+    print(cols)
 
-for c in ['student_id', 'last_name', 'first_name']:
-    if fields[c][args.lang] not in cols:
-        print(f"{fields[c][args.lang]} is a required field not found in {infile}")
-        exit()
-for c in ['Email address', 'Section']:
-    if c not in cols:
-        print(f"{c} is a recommended field not found in {infile}")
+    for c in ['student_id', 'last_name', 'first_name']:
+        if fields[c][lang] not in cols:
+             raise SystemExit(f"{fields[c][lang]} is a required field not found in input file '{infile}'\nNo output produced.")
+    for c in ['email_address', 'section']:
+        if fields[c][lang]  not in cols:
+            print(f"{fields[c][lang]} is a recommended field not found in {infile}")
 
-outfile = args.output
-if outfile == None:
-    outfile = os.path.splitext(infile)[0]+'.lst'
-elif not os.path.splitext(outfile)[1] == '.lst':
-    outfile = outfile+'.lst'
+    with open(outfile, 'w', encoding='utf-8', newline='') as csvout:
+        writer = csv.writer(csvout,dialect='unix', quoting=csv.QUOTE_MINIMAL)
+        header_row = ["# Field order:", "student_id", "last_name", "first_name", "status", "comment", "section", "recitation", "email_address", "user_id", "password", "permission"]
+        writer.writerow(header_row)
 
-writer = csv.writer(open(outfile, 'w', encoding='utf-8', newline=''),dialect='unix', quoting=csv.QUOTE_MINIMAL)
-header_row = ["# Field order:", "student_id", "last_name", "first_name", "status", "comment", "section", "recitation", "email_address", "user_id", "password", "permission"]
-writer.writerow(header_row)
-# print(header_row)
+        translate = ['Student number']
+        for row in reader:
+        # Strip off the strange OV formatting '="...."'
+            row = {k:v[2:-1] if isinstance(v,str) and v.startswith('=') else v for (k,v) in row.items()}
 
-translate = ['Student number']
-for row in reader:
-# Strip off the strange OV formatting '="...."'
-    row = {k:v[2:-1] if isinstance(v,str) and v.startswith('=') else v for (k,v) in row.items()}
-#    print(row)
-    classlist_row = [
-        row[fields['student_id'][args.lang]],
-        unidecode.unidecode(row[fields['last_name'][args.lang]]),
-        unidecode.unidecode(row[fields['first_name'][args.lang]]),
-        "C",
-        "",
-        row[fields['section'][args.lang]] if row[fields['section'][args.lang]] else '',
-        "",
-        row[fields['email_address'][args.lang]] if row[fields['email_address'][args.lang]] else '',
-        row[fields['student_id'][args.lang]],
-        "",
-        0
-    ]
-#    print(classlist_row)
-    writer.writerow(classlist_row)
+            classlist_row = [
+                row[fields['student_id'][lang]],
+                unidecode.unidecode(row[fields['last_name'][lang]]),
+                unidecode.unidecode(row[fields['first_name'][lang]]),
+                "C",
+                "",
+                row[fields['section'][lang]] if fields['section'][lang] in row and row[fields['section'][lang]] else '',
+                "",
+                row[fields['email_address'][lang]] if fields['email_address'][lang] in row and row[fields['email_address'][lang]] else '',
+                row[fields['student_id'][lang]],
+                "",
+                0
+            ]
 
+            writer.writerow(classlist_row)
