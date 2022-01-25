@@ -9,7 +9,9 @@ use open IO => ':encoding(UTF-8)';
 sub cryptPassword($) {
 	my ($clearPassword) = @_;
 	#Use an SHA512 salt with 16 digits
-	my $salt = '$6$';
+#	my $salt = '$6$';
+	#Stopped working!  Use a plain 16 digit salt
+	my $salt = '';
 	for (my $i=0; $i<16; $i++) {
 		$salt .= ('.','/','0'..'9','A'..'Z','a'..'z')[rand 64];
 	}
