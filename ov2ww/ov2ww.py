@@ -5,37 +5,32 @@ See --help for parameters
 """
 
 from argparse import ArgumentParser
-import os.path
 import csv
-
-# Used to strip accents from names if the WeBWorK version can't handle accents
-# import unidecode
+import os.path
 
 def main():
 
     args = parse_args()
 
-
-
+    infile,outfile,processname = configure(args)
     lang = args.lang
 
-    fields = definitions()
-
-    infile,outfile,processname = configure(args)
+    fields,req_fields,rec_fields = definitions()
 
     with open(infile, 'r') as csvin:
         reader = csv.DictReader(csvin,delimiter=args.delimiter)
         cols = reader.fieldnames
         print(cols)
 
-        for c in ['student_id', 'last_name', 'first_name']:
+        for c in req_fields:
             if fields[c][lang] not in cols:
                 raise SystemExit(f"{fields[c][lang]} is a required field not found in input file '{infile}'\nNo output produced.")
-        for c in ['email_address', 'section']:
+        for c in rec_fields:
             if fields[c][lang]  not in cols:
                 print(f"{fields[c][lang]} is a recommended field not found in {infile}")
 
         with open(outfile, 'w', encoding='utf-8', newline='') as csvout:
+            print("Writing to ",outfile)
             writer = csv.writer(csvout,dialect='unix', quoting=csv.QUOTE_MINIMAL)
             header_row = ["# Field order:", "student_id", "last_name", "first_name", "status", "comment", "section", "recitation", "email_address", "user_id", "password", "permission"]
             writer.writerow(header_row)
@@ -47,8 +42,6 @@ def main():
 
                 classlist_row = [
                     row[fields['student_id'][lang]],
-                    # unidecode.unidecode(row[fields['last_name'][lang]]),
-                    # unidecode.unidecode(row[fields['first_name'][lang]]),
                     processname(row[fields['last_name'][lang]]),
                     processname(row[fields['first_name'][lang]]),
                     "C",
@@ -82,7 +75,7 @@ def parse_args():
     default = 'en',
     )
     parser.add_argument('--no_accents',
-    help = "Exclude accented characters from WW file\nRequires unidecode library",
+    help = "Exclude accented characters from the WW file.  unidecode is required",
     default=False,
     action="store_true",
     )
@@ -100,22 +93,22 @@ def configure(args):
         outfile = os.path.splitext(infile)[0]+'.lst'
     elif not os.path.splitext(outfile)[1] == '.lst':
         outfile = outfile+'.lst'
+    
     if args.no_accents:
         try:
-            import unidecode # Used to strip accents from names if requested
+            import unidecode
         except ImportError:
             print("The module unidecode was not found. Accented characters will be retained")
             args.no_accents = False
+
     if args.no_accents:        
-        processname = noaccents
+        def processname(text):
+            return unidecode.unidecode(text)
     else:
-        processname = accents
+        def processname(text):
+            return text
     
     return infile, outfile, processname
-
-
-
-
 
 def definitions():
 
@@ -141,13 +134,16 @@ def definitions():
             'fr':'Adresse de courriel'
         },
     }
-    return(fields)
-
-def accents(text):
-    return(text)
-
-def noaccents(text):
-    return(unidecode.unidecode(text))
+    req_fields = [
+        'student_id', 
+        'last_name', 
+        'first_name',
+    ]
+    rec_fields = [
+        'email_address', 
+        'section',
+    ]
+    return fields, req_fields, rec_fields
 
 if __name__ == '__main__':
     main()

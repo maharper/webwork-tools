@@ -1,3 +1,5 @@
 # To Do
 
-1. Add a list of to dos ;-)
+- [ ] Continue to clean up the script
+- [ ] Format the student numbers to seven digits
+- [ ] Format the section numbers to two digits
