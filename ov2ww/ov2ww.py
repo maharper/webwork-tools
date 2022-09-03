@@ -35,7 +35,6 @@ def main():
             header_row = ["# Field order:", "student_id", "last_name", "first_name", "status", "comment", "section", "recitation", "email_address", "user_id", "password", "permission"]
             writer.writerow(header_row)
 
-            translate = ['Student number']
             for row in reader:
             # Strip off the strange OV formatting '="...."'
                 row = {k:v[2:-1] if isinstance(v,str) and v.startswith('=') else v for (k,v) in row.items()}
