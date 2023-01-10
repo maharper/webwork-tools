@@ -17,7 +17,7 @@ def main():
 
     fields,req_fields,rec_fields = definitions()
 
-    with open(infile, 'r') as csvin:
+    with open(infile, 'r', encoding='latin-1') as csvin:
         reader = csv.DictReader(csvin,delimiter=args.delimiter)
         cols = reader.fieldnames
         print(cols)
