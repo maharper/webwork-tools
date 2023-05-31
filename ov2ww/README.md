@@ -9,6 +9,8 @@ Python >= 3.?
 Older versions of WeBWorK didn't display accented characters properly.
 The script can remove accented characters from names, but needs to have the python `unidecode` module available in order to do so.
 There has been no problem with accented character display in WeBWorK since at least version 2.16.
+If removing accented characters is not requested, that is if the script is run without the `--no_accents` option,
+then the `unidecode` module does not need to be available.
 
 ## Usage:
 
